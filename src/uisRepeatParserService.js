@@ -41,7 +41,7 @@ uis.service('uisRepeatParser', ['uiSelectMinErr','$parse', function(uiSelectMinE
   };
 
   self.getNgRepeatExpression = function(itemName, source, trackByExp, grouped) {
-    var expression = itemName + ' in ' + (grouped ? '$group.items' : source);
+    var expression = itemName + ' in ' + (grouped ? '$group.limitTo ? ($group.items | limitTo:$group.limitTo) : $group.items' : source);
     if (trackByExp) {
       expression += ' track by ' + trackByExp;
     }

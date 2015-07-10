@@ -102,7 +102,7 @@ uis.controller('uiSelectCtrl',
     })[0];
   };
 
-  ctrl.parseRepeatAttr = function(repeatAttr, groupByExp, groupFilterExp) {
+  ctrl.parseRepeatAttr = function(repeatAttr, groupByExp, groupFilterExp, groupLimitTo) {
     function updateGroups(items) {
       var groupFn = $scope.$eval(groupByExp);
       ctrl.groups = [];
@@ -113,7 +113,7 @@ uis.controller('uiSelectCtrl',
           group.items.push(item);
         }
         else {
-          ctrl.groups.push({name: groupName, items: [item]});
+          ctrl.groups.push({name: groupName, items: [item], limitTo: groupLimitTo});
         }
       });
       if(groupFilterExp){
@@ -304,6 +304,15 @@ uis.controller('uiSelectCtrl',
         }
       }
     }
+  };
+
+  ctrl.isGroupLimited = function (group) {
+    return ctrl.isGrouped && group.limitTo && group.limitTo < group.items.length;
+  };
+  ctrl.setGroupUnlimited = function (group, $event) {
+    group.limitTo = undefined;
+    $event.preventDefault();
+    $event.stopPropagation();
   };
 
   // Closes the dropdown

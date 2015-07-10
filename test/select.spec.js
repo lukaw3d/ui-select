@@ -754,6 +754,74 @@ describe('ui-select tests', function() {
     });
   });
 
+  describe('choices group limit to number', function () {
+    function createUiSelect(args) {
+      return compileTemplate('\
+        <ui-select ng-model="selection.selected"> \
+          <ui-select-match placeholder="Pick one...">{{$select.selected.name}}</ui-select-match> \
+          <ui-select-choices group-by="\'group\'" group-limit-to="' + args.limitTo + '" \
+              repeat="person in people | filter: $select.search"> \
+            <div ng-bind-html="person.name | highlight: $select.search"></div> \
+          </ui-select-choices> \
+        </ui-select>'
+      );
+    }
+    function lengthsPerGroup(el) {
+      return {
+        items: el.scope().$select.groups.map(function (group) {
+          return group.items.length;
+        }),
+        choices: el.find('.ui-select-choices-group').map(function () {
+          return $(this).find('.ui-select-choices-row-inner').size();
+        }).toArray(),
+        showAlls: el.find('.ui-select-choices-show-all').size()
+      };
+    }
+    function clickShowAll(el, text) {
+      return el.find('.ui-select-choices-show-all:contains(' + text + ')').first().click();
+    }
+
+    it("should limit the shown items in each group", function () {
+      var el = createUiSelect({limitTo: 3});
+      clickMatch(el);
+
+      showChoicesForSearch(el, 'a');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [3, 2, 1], showAlls: 1});
+    });
+
+    it("should stop limiting the shown items after click and restart after searching", function () {
+      var el = createUiSelect({limitTo: 1});
+      clickMatch(el);
+
+      showChoicesForSearch(el, 'a');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [1, 1, 1], showAlls: 2});
+
+      clickShowAll(el, 'Show all (2 choices)');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [1, 2, 1], showAlls: 1});
+
+      clickShowAll(el, 'Show all (5 choices)');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [5, 2, 1], showAlls: 0});
+
+      $timeout(function () {});
+      showChoicesForSearch(el, 'b');
+      $timeout(function () {});
+
+      showChoicesForSearch(el, 'a');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [1, 1, 1], showAlls: 2});
+
+      clickShowAll(el, 'Show all (5 choices)');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [5, 1, 1], showAlls: 1});
+    });
+
+    it("should not limit the number of shown if it is below the limit", function () {
+      var el = createUiSelect({limitTo: 3});
+      clickMatch(el);
+      showChoicesForSearch(el, 'am');
+
+      expect(lengthsPerGroup(el)).toEqual({items: [2, 1], choices: [2, 1], showAlls: 0});
+    });
+  });
+
 
   it('should throw when no ui-select-choices found', function() {
     expect(function() {
