@@ -107,7 +107,7 @@ uis.controller('uiSelectCtrl',
     })[0];
   };
 
-  ctrl.parseRepeatAttr = function(repeatAttr, groupByExp, groupFilterExp) {
+  ctrl.parseRepeatAttr = function(repeatAttr, groupByExp, groupFilterExp, groupLimitTo) {
     function updateGroups(items) {
       var groupFn = $scope.$eval(groupByExp);
       ctrl.groups = [];
@@ -118,7 +118,7 @@ uis.controller('uiSelectCtrl',
           group.items.push(item);
         }
         else {
-          ctrl.groups.push({name: groupName, items: [item]});
+          ctrl.groups.push({name: groupName, items: [item], limitTo: groupLimitTo});
         }
       });
       if(groupFilterExp){
@@ -229,6 +229,26 @@ uis.controller('uiSelectCtrl',
     }
   };
 
+  ctrl.changeActiveIndex = function (index, groups, increaseOrDecrease) {
+    if (!groups) return increaseOrDecrease ? index + 1 : index - 1;
+    var prevGroupLastIndex = 0;
+    var prevGroupLastShownIndex = -1;
+
+    for (var i = 0; i < groups.length; i++) {
+      var group = groups[i];
+      var shownLength = Math.min(group.limitTo, group.items.length);
+
+      var changedIx = increaseOrDecrease ? index + 1 : index - 1;
+      var ixBetweenGroups = increaseOrDecrease ? prevGroupLastIndex : prevGroupLastShownIndex;
+      if (changedIx < prevGroupLastIndex) return ixBetweenGroups;
+      if (changedIx < prevGroupLastIndex + shownLength) return changedIx;
+
+      prevGroupLastIndex += group.items.length;
+      prevGroupLastShownIndex += shownLength;
+    }
+    return increaseOrDecrease ? index + 1 : index - 1;
+  };
+
   ctrl.isActive = function(itemScope) {
     if ( !ctrl.open ) {
       return false;
@@ -333,6 +353,15 @@ uis.controller('uiSelectCtrl',
     }
   };
 
+  ctrl.isGroupLimited = function (group) {
+    return ctrl.isGrouped && group.limitTo < group.items.length;
+  };
+  ctrl.setGroupUnlimited = function (group, $event) {
+    group.limitTo = Infinity;
+    $event.preventDefault();
+    $event.stopPropagation();
+  };
+
   // Closes the dropdown
   ctrl.close = function(skipFocusser) {
     if (!ctrl.open) return;
@@ -411,15 +440,21 @@ uis.controller('uiSelectCtrl',
   };
 
   function _handleDropDownSelection(key) {
+    var maxIx = ctrl.items.length;
+    if (ctrl.groups) {
+      var lastGroup = ctrl.groups[ctrl.groups.length - 1];
+      maxIx -= lastGroup.items.length - Math.min(lastGroup.limitTo, lastGroup.items.length);
+    }
+
     var processed = true;
     switch (key) {
       case KEY.DOWN:
         if (!ctrl.open && ctrl.multiple) ctrl.activate(false, true); //In case its the search input in 'multiple' mode
-        else if (ctrl.activeIndex < ctrl.items.length - 1) { ctrl.activeIndex++; }
+        else if (ctrl.activeIndex < maxIx - 1) { ctrl.activeIndex = ctrl.changeActiveIndex(ctrl.activeIndex, ctrl.groups, true); }
         break;
       case KEY.UP:
         if (!ctrl.open && ctrl.multiple) ctrl.activate(false, true); //In case its the search input in 'multiple' mode
-        else if (ctrl.activeIndex > 0 || (ctrl.search.length === 0 && ctrl.tagging.isActivated && ctrl.activeIndex > -1)) { ctrl.activeIndex--; }
+        else if (ctrl.activeIndex > 0 || (ctrl.search.length === 0 && ctrl.tagging.isActivated && ctrl.activeIndex > -1)) { ctrl.activeIndex = ctrl.changeActiveIndex(ctrl.activeIndex, ctrl.groups, false); }
         break;
       case KEY.TAB:
         if (!ctrl.multiple || ctrl.open) ctrl.select(ctrl.items[ctrl.activeIndex], true);
@@ -526,8 +561,19 @@ uis.controller('uiSelectCtrl',
     if (ctrl.activeIndex < 0) {
       return;
     }
+    var activeIx = ctrl.activeIndex;
+    if (ctrl.groups) {
+      var fullActiveIx = activeIx;
+      var limitedActiveIx = 0;
+      for (var i = 0; i < ctrl.groups.length; i++) {
+        if (ctrl.groups[i].items.length > fullActiveIx) break;
+        fullActiveIx -= ctrl.groups[i].items.length;
+        limitedActiveIx += Math.min(ctrl.groups[i].limitTo, ctrl.groups[i].items.length);
+      }
+      activeIx = limitedActiveIx + fullActiveIx;
+    }
 
-    var highlighted = choices[ctrl.activeIndex];
+    var highlighted = choices[activeIx];
     var posY = highlighted.offsetTop + highlighted.clientHeight - container[0].scrollTop;
     var height = container[0].offsetHeight;
 

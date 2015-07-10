@@ -22,8 +22,9 @@ uis.directive('uiSelectChoices',
         // var repeat = RepeatParser.parse(attrs.repeat);
         var groupByExp = attrs.groupBy;
         var groupFilterExp = attrs.groupFilter;
+        var groupLimitTo = attrs.groupLimitTo ? parseInt(attrs.groupLimitTo) : Infinity;
 
-        $select.parseRepeatAttr(attrs.repeat, groupByExp, groupFilterExp); //Result ready at $select.parserResult
+        $select.parseRepeatAttr(attrs.repeat, groupByExp, groupFilterExp, groupLimitTo); //Result ready at $select.parserResult
 
         $select.disableChoiceExpression = attrs.uiDisableChoice;
         $select.onHighlightCallback = attrs.onHighlight;
@@ -48,6 +49,17 @@ uis.directive('uiSelectChoices',
         var rowsInner = element.querySelectorAll('.ui-select-choices-row-inner');
         if (rowsInner.length !== 1) throw uiSelectMinErr('rows', "Expected 1 .ui-select-choices-row-inner but got '{0}'.", rowsInner.length);
         rowsInner.attr('uis-transclude-append', ''); //Adding uisTranscludeAppend directive to row element after choices element has ngRepeat
+
+        var showAll = element.querySelectorAll('.ui-select-choices-show-all');
+        if (groupLimitTo === Infinity) {
+          showAll.remove();
+        } else {
+          if (showAll.length !== 1) throw uiSelectMinErr('rows', "Expected 1 .ui-select-choices-show-all but got '{0}'.", choices.showAll);
+          showAll.attr('ng-if', '$select.isGroupLimited($group)')
+                 .attr('ng-click', '$select.setGroupUnlimited($group, $event)')
+                 .querySelectorAll('a')
+                   .attr('ng-bind-template', 'Show all ({{$group.items.length}} choices)');
+        }
 
         $compile(element, transcludeFn)(scope); //Passing current transcludeFn to be able to append elements correctly from uisTranscludeAppend
 

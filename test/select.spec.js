@@ -228,7 +228,7 @@ describe('ui-select tests', function() {
     expect(ngExp).toBe('person in $select.items');
 
     var ngExpGrouped = parserResult.repeatExpression(true);
-    expect(ngExpGrouped).toBe('person in $group.items');
+    expect(ngExpGrouped).toContain('person in $group.items');
 
   });
 
@@ -274,7 +274,7 @@ describe('ui-select tests', function() {
     expect(ngExp).toBe('person in $select.items');
 
     var ngExpGrouped = parserResult.repeatExpression(true);
-    expect(ngExpGrouped).toBe('person in $group.items');
+    expect(ngExpGrouped).toContain('person in $group.items');
 
   });
 
@@ -955,6 +955,74 @@ describe('ui-select tests', function() {
       expect(el.find('.ui-select-choices-group .ui-select-choices-group-label').map(function() {
         return this.textContent;
       }).toArray()).toEqual(["Foo"]);
+    });
+  });
+
+  describe('choices group limit to number', function () {
+    function createUiSelect(args) {
+      return compileTemplate('\
+        <ui-select ng-model="selection.selected"> \
+          <ui-select-match placeholder="Pick one...">{{$select.selected.name}}</ui-select-match> \
+          <ui-select-choices group-by="\'group\'" group-limit-to="' + args.limitTo + '" \
+              repeat="person in people | filter: $select.search"> \
+            <div ng-bind-html="person.name | highlight: $select.search"></div> \
+          </ui-select-choices> \
+        </ui-select>'
+      );
+    }
+    function lengthsPerGroup(el) {
+      return {
+        items: el.scope().$select.groups.map(function (group) {
+          return group.items.length;
+        }),
+        choices: el.find('.ui-select-choices-group').map(function () {
+          return $(this).find('.ui-select-choices-row-inner').size();
+        }).toArray(),
+        showAlls: el.find('.ui-select-choices-show-all').size()
+      };
+    }
+    function clickShowAll(el, text) {
+      return el.find('.ui-select-choices-show-all:contains(' + text + ')').first().click();
+    }
+
+    it("should limit the shown items in each group", function () {
+      var el = createUiSelect({limitTo: 3});
+      clickMatch(el);
+
+      showChoicesForSearch(el, 'a');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [3, 2, 1], showAlls: 1});
+    });
+
+    it("should stop limiting the shown items after click and restart after searching", function () {
+      var el = createUiSelect({limitTo: 1});
+      clickMatch(el);
+
+      showChoicesForSearch(el, 'a');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [1, 1, 1], showAlls: 2});
+
+      clickShowAll(el, 'Show all (2 choices)');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [1, 2, 1], showAlls: 1});
+
+      clickShowAll(el, 'Show all (5 choices)');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [5, 2, 1], showAlls: 0});
+
+      $timeout(function () {});
+      showChoicesForSearch(el, 'b');
+      $timeout(function () {});
+
+      showChoicesForSearch(el, 'a');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [1, 1, 1], showAlls: 2});
+
+      clickShowAll(el, 'Show all (5 choices)');
+      expect(lengthsPerGroup(el)).toEqual({items: [5, 2, 1], choices: [5, 1, 1], showAlls: 1});
+    });
+
+    it("should not limit the number of shown if it is below the limit", function () {
+      var el = createUiSelect({limitTo: 3});
+      clickMatch(el);
+      showChoicesForSearch(el, 'am');
+
+      expect(lengthsPerGroup(el)).toEqual({items: [2, 1], choices: [2, 1], showAlls: 0});
     });
   });
 
@@ -2351,6 +2419,47 @@ describe('ui-select tests', function() {
       var item = 2015;
 
       expect(highlight(item, query)).toBe('20<span class="ui-select-highlight">15</span>');
+    });
+  });
+
+  describe('changeActiveIndex function', function () {
+    var infLimit = [{limitTo: Infinity, items: {length: 5}}, {limitTo: Infinity, items: {length: 5}}];
+    var highLimit = [{limitTo: 5, items: {length: 5}}, {limitTo: 5, items: {length: 5}}];
+    var lowLimit = [{limitTo: 3, items: {length: 5}}, {limitTo: 3, items: {length: 5}}];
+    var changeActiveIndex;
+
+    beforeEach(inject(function ($rootScope, $controller) {
+      var uiSelectCtrl = $controller = $controller('uiSelectCtrl', {$scope: $rootScope.$new(), $element: angular.element('<div><input class="ui-select-search"></input></div>')});
+      changeActiveIndex = uiSelectCtrl.changeActiveIndex;
+    }));
+
+    it('no groups', function () {
+      expect(changeActiveIndex(1, false, true)).toBe(2);
+      expect(changeActiveIndex(1, false, false)).toBe(0);
+    });
+    it('high limit', function () {
+      expect(changeActiveIndex(-1, highLimit, true)).toBe(0);
+      expect(changeActiveIndex(1, highLimit, true)).toBe(2);
+      expect(changeActiveIndex(2, highLimit, true)).toBe(3);
+      expect(changeActiveIndex(4, highLimit, true)).toBe(5);
+      expect(changeActiveIndex(6, highLimit, true)).toBe(7);
+
+      expect(changeActiveIndex(1, infLimit, true)).toBe(2);
+      expect(changeActiveIndex(6, infLimit, true)).toBe(7);
+    });
+    it('low limit', function () {
+      expect(changeActiveIndex(-1, lowLimit, true)).toBe(0);
+      expect(changeActiveIndex(1, lowLimit, true)).toBe(2);
+      expect(changeActiveIndex(2, lowLimit, true)).toBe(5);
+      expect(changeActiveIndex(4, lowLimit, true)).toBe(5);
+      expect(changeActiveIndex(6, lowLimit, true)).toBe(7);
+    });
+    it('decrease', function () {
+      expect(changeActiveIndex(0, lowLimit, false)).toBe(-1);
+      expect(changeActiveIndex(1, lowLimit, false)).toBe(0);
+      expect(changeActiveIndex(3, lowLimit, false)).toBe(2);
+      expect(changeActiveIndex(5, lowLimit, false)).toBe(2);
+      expect(changeActiveIndex(6, lowLimit, false)).toBe(5);
     });
   });
 

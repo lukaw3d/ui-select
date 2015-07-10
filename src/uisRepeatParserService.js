@@ -56,7 +56,7 @@ uis.service('uisRepeatParser', ['uiSelectMinErr','$parse', function(uiSelectMinE
       trackByExp: match[8],
       modelMapper: $parse(match[1] || match[4] || match[2]),
       repeatExpression: function (grouped) {
-        var expression = this.itemName + ' in ' + (grouped ? '$group.items' : '$select.items');
+        var expression = this.itemName + ' in ' + (grouped ? '$group.items | limitTo:$group.limitTo' : '$select.items');
         if (this.trackByExp) {
           expression += ' track by ' + this.trackByExp;
         }

@@ -75,7 +75,7 @@
         age: <span ng-bind-html="''+person.age | highlight: $select.search"></span>
       </small>
     </ui-select-choices>
-    </ui-select>
+  </ui-select>
 
   <h2>Grouped using a function (group-by="someGroupFn")</h2>
   <ui-select ng-model="person.selected" theme="select2" ng-disabled="disabled" style="min-width: 300px;" title="Choose a person">
@@ -87,7 +87,15 @@
         age: <span ng-bind-html="''+person.age | highlight: $select.search"></span>
       </small>
     </ui-select-choices>
-    </ui-select>
+  </ui-select>
+
+  <h2>Limit groups using group-limit-to="3"</h2>
+  <ui-select ng-model="person.selected" theme="select2" ng-disabled="disabled" style="min-width: 300px;" title="Choose a person">
+    <ui-select-match placeholder="Select a person in the list or search his name...">{{$select.selected.name}}</ui-select-match>
+    <ui-select-choices group-by="someGroupFn" repeat="person in people | filter: {name: $select.search}" group-limit-to="3">
+      <div ng-bind-html="person.name | highlight: $select.search"></div>
+    </ui-select-choices>
+  </ui-select>
 
   <h2>Simple (no groupBy)</h2>
   <ui-select ng-model="person.selected" theme="select2" ng-disabled="disabled" style="min-width: 300px;" title="Choose a person">
