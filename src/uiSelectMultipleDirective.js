@@ -349,6 +349,15 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
           scope.$evalAsync( function () {
             $select.activeIndex = 0;
             $select.items = items;
+            if ($select.isGrouped) {
+              // remove existing tagging group
+              if ($select.groups[0] && $select.groups[0].tagging) {
+                $select.groups.splice(0, 1);
+              }
+              if (newItem) {
+                $select.groups.splice(0, 0, {name: '', items: [newItem], tagging: true});
+              }
+            }
           });
         }
       });
