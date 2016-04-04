@@ -454,7 +454,7 @@ uis.controller('uiSelectCtrl',
         break;
       case KEY.UP:
         if (!ctrl.open && ctrl.multiple) ctrl.activate(false, true); //In case its the search input in 'multiple' mode
-        else if (ctrl.activeIndex > 0 || (ctrl.search.length === 0 && ctrl.tagging.isActivated && ctrl.activeIndex > -1)) { ctrl.activeIndex = ctrl.changeActiveIndex(ctrl.activeIndex, ctrl.groups, false); }
+        else if (ctrl.activeIndex > 0) { ctrl.activeIndex = ctrl.changeActiveIndex(ctrl.activeIndex, ctrl.groups, false); }
         break;
       case KEY.TAB:
         if (!ctrl.multiple || ctrl.open) ctrl.select(ctrl.items[ctrl.activeIndex], true);
